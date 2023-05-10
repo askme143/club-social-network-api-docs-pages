@@ -1,0 +1,1052 @@
+openapi: 3.0.0
+info:
+  title: ClubSocialNetwork API Definition
+  description: API of ClubSocialNetwork Backend
+  version: v0
+  contact:
+    name: Team 3
+
+servers:
+  - url: http://api.club-social-network.com/api
+
+tags:
+  - name: clubs
+  - name: posts
+  - name: comments
+  - name: likes
+  - name: schedules
+  - name: applications-clubs
+  - name: applications-users
+
+components:
+  securitySchemes:
+    Authorization:
+      type: http
+      scheme: bearer
+  parameters:
+    ClubId:
+      in: path
+      name: clubId
+      required: true
+      schema:
+        type: string
+    PostId:
+      in: path
+      name: postId
+      required: true
+      schema:
+        type: string
+    CommentId:
+      in: path
+      name: commentId
+      required: true
+      schema:
+        type: string
+    UserId:
+      in: path
+      name: userId
+      required: true
+      schema:
+        type: string
+    ScheduleId:
+      in: path
+      name: scheduleId
+      required: true
+      schema:
+        type: string
+  responses:
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CommonError'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CommonError'
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CommonError'
+    Conflicted:
+      description: Conflicted
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CommonError'
+  schemas:
+    CommonError:
+      type: object
+      properties:
+        message:
+          type: string
+    ScheduleSimple:
+      type: object
+      properties:
+        scheduleId:
+          type: string
+        authorId:
+          type: string
+        clubId:
+          type: string
+        name:
+          type: string
+        startDttm:
+          type: string
+          format: date-time
+        endDttm:
+          type: string
+          format: date-time
+        isPublic:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    ScheduleDetail:
+      allOf:
+        - $ref: '#/components/schemas/ScheduleSimple'
+        - type: object
+          properties:
+            description:
+              type: string
+            imageUrls:
+              type: array
+              items:
+                type: string
+    Application:
+      type: object
+      properties:
+        applicantId:
+          type: string
+        clubId:
+          type: string
+        applicantName:
+          type: string
+        clubName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        isRejected:
+          type: boolean
+    Member:
+      type: object
+      properties:
+        userId:
+          type: string
+        clubId:
+          type: string
+        userName:
+          type: string
+        isAdmin:
+          type: boolean
+        createdAt: 
+          type: string
+          format: date-time
+    Comment:
+      type: object
+      properties:
+        commentId:
+          type: string
+        postId:
+          type: string
+        authorId:
+          type: string
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Club:
+      type: object
+      properties:
+        clubId:
+          type: string
+        adminIds:
+          type: array
+          items:
+            type: string
+        name:
+          type: string
+        description:
+          type: string
+        imageUrl:
+          type: string
+          format: url
+        memberCount:
+          type: integer
+        canApply:
+          type: boolean
+        createdAt: 
+          type: string
+          format: date-time
+    Post:
+      type: object
+      properties:
+        postId:
+          type: string
+        authorId:
+          type: string
+        clubId:
+          type: string
+        content:
+          type: string
+        imageUrls:
+          type: array
+          items:
+            type: string
+        liked:
+          type: boolean
+        likeCount:
+          type: integer
+        commentCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        isPublic:
+          type: boolean
+        isAnnouncement:
+          type: boolean
+
+security:
+  - Authorization: []
+
+paths:
+  /clubs:
+    get:
+      description: Returns a list of club ids.
+      operationId: getClubIds
+      tags:
+      - clubs
+      parameters:
+        - in: query
+          name: type
+          required: true
+          description: type of result
+          schema:
+            type: string
+            enum: [subscribed, joined, managing, starred, search]
+        - in: query
+          name: lastClubId
+          description: last club id for pagination
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+        - in: query
+          name: sort
+          description: sort in alphabetical order if true
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Club ids
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        401:
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      description: Create a new club
+      operationId: createClub
+      tags:
+      - clubs
+      parameters:
+        - in: query
+          name: clubName
+          required: true
+          schema:
+            type: string
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clubId:
+                    type: string
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        409:
+          $ref: '#/components/responses/Conflicted'
+          
+  /clubs/{clubId}:
+    parameters:
+      - $ref: '#/components/parameters/ClubId'
+    get:
+      description: Return information of the club
+      operationId: getClubInfo
+      tags:
+      - clubs
+      responses:
+        200:
+          description: Club info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Club'
+        404:
+          $ref: '#/components/responses/NotFound'
+    put:
+      description: Update information of the club
+      tags:
+      - clubs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                canApply:
+                  type: boolean
+                description:
+                  type: string
+      responses:
+        200:
+          description: Club info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Club'
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+    delete:
+      description: Delete a club
+      tags:
+      - clubs
+      responses:
+        204:
+          description: Deleted
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /clubs/{clubId}/posts:
+    get:
+        description: Return posts of the club
+        operationId: getClubPosts
+        tags:
+        - clubs
+        - posts
+        parameters:
+          - $ref: '#/components/parameters/ClubId'
+          - in: query
+            name: type
+            required: true
+            schema:
+              type: string
+              enum: [ordinary, announcement]
+        responses:
+          200:
+            description: Club posts
+            content:
+              application/json:
+                schema:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Post'
+          404:
+            $ref: '#/components/responses/NotFound'
+    post:
+      description: Create a new post
+      operationId: createClubPost
+      tags:
+      - clubs
+      - posts
+      parameters:
+        - $ref: '#/components/parameters/ClubId'
+      requestBody:
+        required: true
+        content:
+          multipart/form:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                isAnnouncement:
+                  type: boolean
+                isPublic:
+                  type: boolean
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+              required:
+                - content
+                - isAnnouncement
+                - isPublic
+      responses:
+        201:
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+            $ref: '#/components/responses/NotFound'
+
+  /posts:
+    get:
+      description: Returns a list of public posts from clubs subscribed by a user
+      operationId: getSubscribedPost
+      tags:
+      - posts
+      parameters:
+        - in: query
+          name: lastPostId
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Public posts from clubs subscribed by a user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+        401: 
+          $ref: '#/components/responses/Unauthorized'
+  
+  /posts/{postId}:
+    get:
+      description: Get specific post with post id
+      tags:
+        - posts
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        200:
+          description: Post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+            $ref: '#/components/responses/NotFound'
+    put:
+      description: Update specific post's announcement and state
+      tags:
+        - posts
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - in: query
+          name: isAnnouncement
+          required: true
+          schema:
+            type: boolean
+        - in: query
+          name: isPublic
+          required: true
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: post updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+            $ref: '#/components/responses/NotFound'
+    delete:
+      description: Delete specific post with post id
+      tags:
+        - posts
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        204:
+          description: Deleted
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+            $ref: '#/components/responses/NotFound'
+
+  /posts/{postId}/comments:
+    get:
+      description: Get comments in a post
+      tags:
+        - comments
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        200:
+          description: comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+            $ref: '#/components/responses/NotFound'
+    post:
+      description: Create a new comment
+      tags:
+        - comments
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        201:
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+            $ref: '#/components/responses/NotFound'
+
+  /posts/{postId}/comments/{commentId}:
+    delete:
+      description: Delete a comment
+      tags:
+        - comments
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - $ref: '#/components/parameters/CommentId'
+      responses:
+        204:
+          description: Deleted
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+            $ref: '#/components/responses/NotFound'
+
+  /posts/{postId}/likes:
+    get:
+      description: Get likes of a post
+      tags:
+        - likes
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+      responses:
+        200:
+          description: comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+            $ref: '#/components/responses/NotFound'
+    put:
+      description: Update user's like of a post
+      tags:
+        - likes
+      parameters:
+        - $ref: '#/components/parameters/PostId'
+        - in: query
+          name: like
+          required: true
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  like:
+                    type: boolean
+                required:
+                  - like
+        401:
+            $ref: '#/components/responses/Unauthorized'
+        403:
+            $ref: '#/components/responses/Forbidden'
+        404:
+            $ref: '#/components/responses/NotFound'
+
+  /clubs/{clubId}/applicationPeriod:
+    parameters:
+      - $ref: '#/components/parameters/ClubId'
+    get:
+      description: Returns true if the club opens application period
+      tags:
+      - applications-clubs
+      - applications-users
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: boolean
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+    put:
+      description: Open or close application period
+      tags:
+      - applications-clubs
+      parameters:
+        - in: query
+          name: open
+          required: true
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Open result
+          content:
+            application/json:
+              schema:
+                type: boolean
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /clubs/{clubId}/applications:
+    parameters:
+      - $ref: '#/components/parameters/ClubId'
+    get:
+      description: Get applications about the club. Response successfully only if the request is from a club admin
+      tags:
+        - applications-clubs
+      responses:
+        200:
+          description: Applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Application'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+  
+  /clubs/{clubId}/applications/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/ClubId'
+      - $ref: '#/components/parameters/UserId'
+    get:
+      description: Get applications about the club from the user. Response successfully only if the request is from a club admin
+      tags:
+        - applications-clubs
+      responses:
+        200:
+          description: Applications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+    put:
+      description: Accept or reject an application. Response successfully only if the request is from a club admin
+      tags:
+        - applications-clubs
+      parameters:
+        - in: query
+          name: accept
+          required: true
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  application-accepted:
+                    type: boolean
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /applications:
+    get:
+      description: Get all applications made by user
+      tags:
+        - applications-users
+      responses:
+        200:
+          description: applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Application'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+    post:
+      description: Apply to the club
+      tags:
+        - applications-users
+      parameters:
+        - in: query
+          name: clubId
+          required: true
+          schema:
+            type: string
+      responses:
+        201:
+          description: Apply successfully
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+        409:
+          description: Not application period or already applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonError'
+
+  /applications/{clubId}:
+    parameters:
+      - $ref: '#/components/parameters/ClubId'
+    get:
+      description: Get an application to the club
+      tags:
+        - applications-users
+      responses:
+        201:
+          description: application
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Application'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /clubs/{clubId}/members:
+    parameters:
+      - $ref: '#/components/parameters/ClubId'
+    get:
+      description: Get members of a club
+      tags:
+        - clubs
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [all, admin]
+      responses:
+        200:
+          description: all members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+
+  /clubs/{clubId}/members/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/ClubId'
+      - $ref: '#/components/parameters/UserId'
+    put:
+      description: Update privileges of a member
+      tags:
+        - clubs
+      parameters:
+        - in: query
+          name: memberInfo
+          schema:
+            type: object
+            properties:
+              admin:
+                type: boolean
+            required:
+              - admin
+      responses:
+        200:
+          description: Ok
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+    delete:
+      description: Kick a member from a club
+      tags:
+        - clubs
+      responses:
+        204:
+          description: Kicked
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+        409:
+          $ref: '#/components/responses/Conflicted'
+  
+  /my-schedules:
+    get:
+      description: Get my schedules
+      tags:
+        - schedules
+      responses:
+        200:
+          description: My Schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScheduleSimple'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      description: Add schedule to my schedule
+      tags:
+        - schedules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scheduleId:
+                  type: string
+              required:
+                - scheduleId
+      responses:
+        200:
+          description: OK
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+  
+  /my-schedules/{scheduleId}:
+    parameters:
+      - $ref: '#/components/parameters/ScheduleId'
+    delete:
+      description: Delete schedule from my schedule
+      tags:
+        - schedules
+      responses:
+        204:
+          description: Deleted
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+          
+  /schedules:
+    get:
+      description: Get schedules
+      tags:
+        - schedules
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [subscribed, club]
+      responses:
+        200:
+          description: Schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScheduleSimple'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+  
+  /schedules/{scheduleId}:
+    parameters:
+      - $ref: '#/components/parameters/ScheduleId'
+    get:
+      description: Get detail of a schedule
+      tags:
+        - schedules
+      responses:
+        200:
+          description: Detail of a schedule
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleDetail'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+    delete:
+      description: Delete a schedule
+      tags:
+        - schedules
+      responses:
+        204:
+          description: Success
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+    put:
+      description: Update a schedule
+      tags:
+        - schedules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleDetail'
+      responses:
+        204:
+          description: Success
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
+  
+  /clubs/{clubId}/schedules:
+    parameters:
+      - $ref: '#/components/parameters/ClubId'
+    post:
+      description: Create new schedule to a club
+      tags:
+        - schedules
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                startDttm:
+                  type: string
+                  format: date-time
+                endDttm:
+                  type: string
+                  format: date-time
+                isPublic:
+                  type: boolean
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+              required:
+                - name
+                - description
+                - startDttm
+                - endDttm
+                - isPublic
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleDetail'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        403:
+          $ref: '#/components/responses/Forbidden'
+        404:
+          $ref: '#/components/responses/NotFound'
